@@ -16,14 +16,15 @@ df.groupBy("author").count().show()
 from pyspark.ml.feature import Tokenizer, StopWordsRemover, CountVectorizer, IDF, Normalizer, StringIndexer
 from pyspark.ml import Pipeline
 
+#text preprocessing stages
 tokenizer = Tokenizer(inputCol="text", outputCol="tokens")
 stopwords_remover = StopWordsRemover(inputCol="tokens", outputCol="filtered_tokens")
-
+# Index the target labels
 label_indexer = StringIndexer(inputCol="author", outputCol="label")
-
+# Generate TF and IDF matrices
 vectorizer = CountVectorizer(inputCol="filtered_tokens", outputCol="vectorized_tokens")
 idf = IDF(inputCol="vectorized_tokens", outputCol="tfidf")
-
+#give all text sequences an equal weight/scale
 normalizer = Normalizer(inputCol="tfidf", outputCol="normalized_features")
 
 pipeline = Pipeline(stages=[label_indexer, tokenizer, stopwords_remover, vectorizer, idf, normalizer])
@@ -55,6 +56,28 @@ print(f"Accuracy: {round(accuracy, 4)}")
 
 print("Confusion Matrix")
 predictions.groupBy("label", "prediction").count().show()
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+cm_pyspark = predictions.groupBy("label", "prediction").count().toPandas()
+
+cm_pivot = cm_pyspark.pivot(index='label', columns='prediction', values='count').fillna(0)
+
+
+plt.figure(figsize=(6, 4))
+sns.heatmap(cm_pivot, annot=True, fmt='g', cmap='Blues')
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Confusion Matrix Heatmap')
+plt.show()
+
+
+
+
+
 
 #Setting up the pipeline using PySpark's ML library was different from Scikit-learn, but chaining the Tokenizer, StopWordsRemover, and TF-IDF tools into one Pipeline made the data preprocessing very efficient. The Bayes model got a good accuracy for classifying the three authors, though the  matrix shows there is still some overlap. If I were to improve this next, I would test a Logistic Regression model or implement a UDF to see if it reduces in the text features.
 
